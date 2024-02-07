@@ -955,7 +955,7 @@
   <string name="WhoCanAddYouToGroupsAndChannels">Who can add you to groups and channels?</string>
   <string name="WhoCanAddMeInfo">You can restrict who can add you to groups and channels with granular precision.</string>
   <string name="LastSeenTitle">Who can see your Last Seen time?</string>
-  <string name="CustomHelp">You won\'t see Last Seen or Online statuses for people with whom you don\'t share yours. Approximate times will be shown instead (recently, within a week, within a month).</string>
+  <string name="CustomHelp">Unless you are a Premium user, you won\'t see Last Seen or Online statuses for people with whom you don\'t share yours. Approximate times will be shown instead (recently, within a week, within a month).</string>
   <string name="AlwaysShareWith">Always Share With</string>
   <string name="NeverShareWith">Never Share With</string>
   <string name="CustomShareSettingsHelp">These settings will override the values above.</string>
@@ -1646,6 +1646,8 @@
   <string name="BioDescription">Any details such as age, occupation or city.\nExample: 23 y.o. designer from San Francisco.</string>
   <string name="AttachPhotoExpired">Expired photo</string>
   <string name="AttachVideoExpired">Expired video</string>
+  <string name="AttachVoiceNoteExpired">Expired voice message</string>
+  <string name="AttachVideoNoteExpired">Expired video message</string>
   <string name="SendByEnter">Send with Enter</string>
   <string name="HideChatKeyboard">Hide keyboard on chat scroll</string>
   <string name="CopiedHashtag">Hashtag has been copied to the clipboard</string>
@@ -3120,21 +3122,22 @@
   <string name="ActionMutePerson">Mute %1$s</string>
   <string name="ActionMuteEveryone">Mute all</string>
 
+  <string name="ActionUnmute">Unute</string>
+  <string name="ActionUnmutePerson">Unmute %1$s</string>
+  <string name="ActionUnmuteEveryone">Unmute all</string>
+
   <string name="NotificationMutedChat">Muted %1$s for 1 hour</string>
   <string name="NotificationMutedPerson">Muted %1$s for 1 hour</string>
   <string name="NotificationMutedPersons_one">Muted %1$s person for 1 hour</string>
   <string name="NotificationMutedPersons_other">Muted %1$s people for 1 hour</string>
+
+  <string name="NotificationUnmutedChat">Unmuted %1$s</string>
+  <string name="NotificationUnmutedPerson">Unmuted %1$s</string>
+  <string name="NotificationUnmutedPeople_one">Unmuted %1$s person</string>
+  <string name="NotificationUnmutedPeople_other">Unmuted %1$s people</string>
+
   <string name="NotificationRead">Marked messages as read</string>
   <string name="NotificationReadMentions">Marked mentions as read</string>
-
-  <!--<string name="ActionMuteHours_one">Mute for %1$sh</string>
-  <string name="ActionMuteHours_other">Mute for %1$sh</string>
-
-  <string name="ActionMutePersonHours_one">Mute %2$s for %1$sh</string>
-  <string name="ActionMutePersonHours_other">Mute %2$s for %1$sh</string>
-
-  <string name="ActionMuteAll_one">Mute all for %1$sh</string>
-  <string name="ActionMuteAll_other">Mute all for %1$sh</string>-->
 
   <string name="MessagePreviewDefault">Default</string>
   <string name="MessagePreviewEnabled">Enabled</string>
@@ -3396,6 +3399,8 @@
 
   <string name="SelfDestructPhoto">Self-Destruct Photo</string>
   <string name="SelfDestructVideo">Self-Destruct Video</string>
+  <string name="SelfDestructVoiceNote">Self-Destruct Voice Message</string>
+  <string name="SelfDestructVideoNote">Self-Destruct Video Message</string>
 
   <string name="InvoiceFor">Invoice for %1$s</string>
   <string name="Invoice">Invoice</string>
@@ -5042,10 +5047,12 @@
   <string name="GiveawayWinnersSelectionDateHeader">Winners Selection Date</string>
   <string name="GiveawayWinnersSelectionDate">%1$s at %2$s</string>
 
-  <string name="xGiveawayWinnersSelectedInfo_one">%1$s winner of the %2$s were randomly selected by Telegram.</string>
-  <string name="xGiveawayWinnersSelectedInfo_other">%1$s winners of the %2$s were randomly selected by Telegram.</string>
-  <string name="xGiveawayPrizePremiumInfo_one">%1$s Telegram Premium Subscription for %2$s months.</string>
-  <string name="xGiveawayPrizePremiumInfo_other">%1$s Telegram Premium Subscriptions for %2$s months.</string>
+  <string name="xGiveawayWinnersSelectedText_one">%1$s winner of the **Giveaway** was randomly selected by Telegram.</string>
+  <string name="xGiveawayWinnersSelectedText_other">%1$s winners of the **Giveaway** were randomly selected by Telegram.</string>
+  <string name="xGiveawayPrizePremium_one">%1$s **Telegram Premium** subscription %2$s.</string>
+  <string name="xGiveawayPrizePremium_other">%1$s **Telegram Premium** subscriptions %2$s.</string>
+  <string name="xGiveawayPrizePremiumMonths_one">for %1$s month</string>
+  <string name="xGiveawayPrizePremiumMonths_other">for %1$s months</string>
   <string name="xGiveawayPrizeReceivedInfo_one">Your prize is a **Telegram Premium** subscription for **%1$s** month.</string>
   <string name="xGiveawayPrizeReceivedInfo_other">Your prize is a **Telegram Premium** subscription for **%1$s** months.</string>
 
@@ -5113,8 +5120,14 @@
   <string name="GiveawayInfoEndedPart3_one">%1$s of the winners already used their gift link.</string>
   <string name="GiveawayInfoEndedPart3_other">%1$s of the winners already used their gift links.</string>
 
-
   <string name="GiveawayInfoClose">Close</string>
   <string name="GiveawayViewMyPrize">View my prize</string>
+
+  <string name="EmulatorWarning">You are running **Telegram X** on an **emulated device**.\n\n**Note**: if you don\'t have an **existing** Telegram account, you may need a **real device** to create it.\n\nIn case you see this warning on a real device (such as phone, tablet, etc), press **report issue**.</string>
+  <string name="EmulatorWarningTitle">Emulator detected</string>
+  <string name="EmulatorWarningBtnReport">Report issue</string>
+  <string name="EmulatorWarningBtnOk">Got it</string>
+  <string name="EmulatorWarningReport">**Note**: you will need **GitHub account** to report this issue.\n\nAlternatively you can copy the link and send it to tgx-android@pm.me</string>
+  <string name="EmulatorWarningReportBtn">Report on GitHub</string>
 
 </resources>
