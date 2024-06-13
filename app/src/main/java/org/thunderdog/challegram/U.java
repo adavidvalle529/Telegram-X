@@ -120,13 +120,13 @@ import org.thunderdog.challegram.telegram.TdlibNotificationManager;
 import org.thunderdog.challegram.tool.Fonts;
 import org.thunderdog.challegram.tool.Intents;
 import org.thunderdog.challegram.tool.Screen;
-import org.thunderdog.challegram.tool.Strings;
 import org.thunderdog.challegram.tool.TGMimeType;
 import org.thunderdog.challegram.tool.UI;
 import org.thunderdog.challegram.ui.TextController;
 import org.thunderdog.challegram.util.AppBuildInfo;
 import org.thunderdog.challegram.util.Permissions;
 import org.thunderdog.challegram.util.text.TextReplacementSpan;
+import org.thunderdog.challegram.util.text.bidi.BiDiUtils;
 import org.thunderdog.challegram.widget.NoScrollTextView;
 
 import java.io.BufferedReader;
@@ -494,7 +494,12 @@ public class U {
           knownType = android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL;
           break;
         case TdlibNotificationManager.ID_PENDING_TASK:
-          knownType = android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC;
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            knownType = android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE;
+          } else {
+            // FOREGROUND_SERVICE_TYPE_SHORT_SERVICE was added in Android 14.
+            knownType = android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST;
+          }
           break;
       }
       if (knownType != android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_NONE) {
@@ -809,17 +814,12 @@ public class U {
     return Environment.MEDIA_MOUNTED.equals(state) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(state);
   }
 
-  public static long getFreeMemorySize (StatFs statFs) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-      return statFs.getBlockSizeLong() * statFs.getAvailableBlocksLong();
-    } else {
-      //noinspection deprecation
-      return (long) statFs.getBlockSize() * (long) statFs.getAvailableBlocks();
-    }
-  }
-
   public static String getOtherNotificationChannel () {
     return getNotificationChannel("other", R.string.NotificationChannelOther);
+  }
+
+  public static String getMaybeNotificationChannel () {
+    return getNotificationChannel("maybe", R.string.NotificationChannelMaybe);
   }
 
   public static String getNotificationChannel (String id, int stringRes) {
@@ -938,15 +938,6 @@ public class U {
       b.append(hourOfDay < 12 ? " AM" : " PM");
     }
     return b.toString();
-  }
-
-  public static long getTotalMemorySize (StatFs statFs) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-      return statFs.getBlockSizeLong() * statFs.getBlockCountLong();
-    } else {
-      //noinspection deprecation
-      return (long) statFs.getBlockSize() * (long) statFs.getBlockCount();
-    }
   }
 
   private static final String MAP_DARK_STYLE = "&style=element:geometry%7Ccolor:0x212121&style=element:labels.icon%7Cvisibility:off&style=element:labels.text.fill%7Ccolor:0x757575&style=element:labels.text.stroke%7Ccolor:0x212121&style=feature:administrative%7Celement:geometry%7Ccolor:0x757575&style=feature:administrative.country%7Celement:labels.text.fill%7Ccolor:0x9e9e9e&style=feature:administrative.land_parcel%7Cvisibility:off&style=feature:administrative.locality%7Celement:labels.text.fill%7Ccolor:0xbdbdbd&style=feature:poi%7Celement:labels.text.fill%7Ccolor:0x757575&style=feature:poi.park%7Celement:geometry%7Ccolor:0x181818&style=feature:poi.park%7Celement:labels.text.fill%7Ccolor:0x616161&style=feature:poi.park%7Celement:labels.text.stroke%7Ccolor:0x1b1b1b&style=feature:road%7Celement:geometry.fill%7Ccolor:0x2c2c2c&style=feature:road%7Celement:labels.text.fill%7Ccolor:0x8a8a8a&style=feature:road.arterial%7Celement:geometry%7Ccolor:0x373737&style=feature:road.highway%7Celement:geometry%7Ccolor:0x3c3c3c&style=feature:road.highway.controlled_access%7Celement:geometry%7Ccolor:0x4e4e4e&style=feature:road.local%7Celement:labels.text.fill%7Ccolor:0x616161&style=feature:transit%7Celement:labels.text.fill%7Ccolor:0x757575&style=feature:water%7Celement:geometry%7Ccolor:0x000000&style=feature:water%7Celement:labels.text.fill%7Ccolor:0x3d3d3d";
@@ -1418,6 +1409,23 @@ public class U {
         UI.post(() -> callback.runWithData(null));
       }
     });
+  }
+
+  public static boolean toGalleryFile (TdApi.Message message, RunnableData<ImageGalleryFile> callback) {
+    final TdApi.File file = TD.getFile(message);
+    if (!TD.isFileLoaded(file)) {
+      return false;
+    }
+
+    final boolean isVideo = message.content.getConstructor() == TdApi.MessageVideo.CONSTRUCTOR;
+    toGalleryFile(new File(file.local.path), isVideo, imageGalleryFile -> {
+      if (imageGalleryFile != null) {
+        imageGalleryFile.setCaption(Td.textOrCaption(message.content));
+      }
+      callback.runWithData(imageGalleryFile);
+    });
+
+    return true;
   }
 
   public static String getFileName (String path) {
@@ -2141,7 +2149,7 @@ public class U {
       return 0;
     }
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+    if (Config.USE_TEXT_ADVANCE && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !BiDiUtils.requiresBidi(in, start, end)) {
       /*
       getTextRunAdvances(char[] chars, int index, int count,
             int contextIndex, int contextCount, boolean isRtl, float[] advances,
@@ -2270,6 +2278,34 @@ public class U {
     }
   }*/
 
+  public static float measureTextRun (@Nullable CharSequence in, @NonNull Paint p, boolean isRtl) {
+    final int count;
+    if (in == null || (count = in.length()) == 0) {
+      return 0;
+    }
+
+    if (Config.USE_TEXT_ADVANCE && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+      return p.getRunAdvance(in, 0, count, 0, in.length(), isRtl, count);
+    }
+
+    return measureText(in, p);
+  }
+
+  public static float measureTextRun (@Nullable CharSequence in, int start, int end, @NonNull Paint p, boolean isRtl) {
+    final int count = end - start;
+
+    if (in == null || in.length() == 0 || count <= 0) {
+      return 0;
+    }
+
+    if (Config.USE_TEXT_ADVANCE && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+      return p.getRunAdvance(in, start, end, 0, in.length(), isRtl, end);
+    }
+
+    return measureText(in, start, end, p);
+  }
+
+  @Deprecated
   public static float measureText (@Nullable CharSequence in, int start, int end, @NonNull Paint p) {
     final int count = end - start;
 
@@ -2280,7 +2316,7 @@ public class U {
     if (p == null)
       throw new IllegalArgumentException();
 
-    if (Config.USE_TEXT_ADVANCE && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Strings.getTextDirection(in, start, end) != Strings.DIRECTION_RTL) {
+    if (Config.USE_TEXT_ADVANCE && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !BiDiUtils.requiresBidi(in, start, end)) {
       return p.getRunAdvance(in, start, end, 0, in.length(), false, end);
     } else {
       float[] widths = pickWidths(count, true);
@@ -2391,6 +2427,8 @@ public class U {
     String metadata = Lang.getAppBuildAndVersion(tdlib) + " (" + BuildConfig.COMMIT + ")\n" +
       (!buildInfo.getPullRequests().isEmpty() ? "PRs: " + buildInfo.pullRequestsList() + "\n" : "") +
       "TDLib: " + Td.tdlibVersion() + " (tdlib/td@" + Td.tdlibCommitHash() + ")\n" +
+      "tgcalls: TGX-Android/tgcalls@" + BuildConfig.TGCALLS_COMMIT + "\n" +
+      "WebRTC: TGX-Android/webrtc@" + BuildConfig.WEBRTC_COMMIT + "\n" +
       "Android: " + SdkVersion.getPrettyName() + " (" + Build.VERSION.SDK_INT + ")" + "\n" +
       "Device: " + Build.MANUFACTURER + " " + Build.BRAND + " " + Build.MODEL + " (" + Build.DISPLAY + ")\n" +
       "Screen: " + Screen.widestSide() + "x" + Screen.smallestSide() + " (density: " + Screen.density() + ", fps: " + Screen.refreshRate() + ")" + "\n" +
@@ -3493,12 +3531,15 @@ public class U {
         clipboard.setPrimaryClip(clip);
       }
     } else {
-      //noinspection deprecation
-      android.text.ClipboardManager clipboard = (android.text.ClipboardManager) UI.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
-      if (clipboard != null) {
-        //noinspection deprecation
-        clipboard.setText(text);
-      }
+      copyTextLegacy(text);
+    }
+  }
+
+  @SuppressWarnings("deprecation")
+  private static void copyTextLegacy (CharSequence text) {
+    android.text.ClipboardManager clipboard = (android.text.ClipboardManager) UI.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
+    if (clipboard != null) {
+      clipboard.setText(text);
     }
   }
 
@@ -3521,12 +3562,16 @@ public class U {
         return null;
       }
     } else {
-      //noinspection deprecation
-      android.text.ClipboardManager clipboard = (android.text.ClipboardManager) UI.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
-      if (clipboard != null) {
-        //noinspection deprecation
-        return clipboard.getText();
-      }
+      return getCopyTextLegacy();
+    }
+    return null;
+  }
+
+  @SuppressWarnings("deprecation")
+  private static CharSequence getCopyTextLegacy () {
+    android.text.ClipboardManager clipboard = (android.text.ClipboardManager) UI.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
+    if (clipboard != null) {
+      return clipboard.getText();
     }
     return null;
   }
@@ -3691,5 +3736,14 @@ public class U {
     long[] result = Arrays.copyOf(first, first.length + second.length);
     System.arraycopy(second, 0, result, first.length, second.length);
     return result;
+  }
+
+  @SuppressWarnings("deprecation")
+  public static String getCpuAbi () {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+      return Build.SUPPORTED_ABIS[0];
+    } else {
+      return Build.CPU_ABI;
+    }
   }
 }

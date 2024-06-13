@@ -1029,6 +1029,20 @@ public class TdlibListeners {
     listChange.list.onUpdateChatPosition(listChange.chat, listChange.change);
   }
 
+  // updateChatAddedToList, updateChatRemovedFromList
+
+  void updateChatAddedToList (TdApi.UpdateChatAddedToList update) {
+    runChatUpdate(update.chatId, listener ->
+      listener.onChatAddedToList(update.chatId, update.chatList)
+    );
+  }
+
+  void updateChatRemovedFromList (TdApi.UpdateChatRemovedFromList update) {
+    runChatUpdate(update.chatId, listener ->
+      listener.onChatRemovedFromList(update.chatId, update.chatList)
+    );
+  }
+
   // updateChatPermissions
 
   private static void updateChatPermissions (long chatId, TdApi.ChatPermissions permissions, @Nullable Iterator<ChatListener> list) {
@@ -1105,17 +1119,18 @@ public class TdlibListeners {
 
   // updateChatActionBar
 
-  private static void updateChatActionBar (TdApi.UpdateChatActionBar update, @Nullable Iterator<ChatListener> list) {
-    if (list != null) {
-      while (list.hasNext()) {
-        list.next().onChatActionBarChanged(update.chatId, update.actionBar);
-      }
-    }
+  void updateChatActionBar (TdApi.UpdateChatActionBar update) {
+    runChatUpdate(update.chatId, listener ->
+      listener.onChatActionBarChanged(update.chatId, update.actionBar)
+    );
   }
 
-  void updateChatActionBar (TdApi.UpdateChatActionBar update) {
-    updateChatActionBar(update, chatListeners.iterator());
-    updateChatActionBar(update, specificChatListeners.iterator(update.chatId));
+  // updateChatBusinessBotManagerBar
+
+  void updateChatBusinessBotManageBar (TdApi.UpdateChatBusinessBotManageBar update) {
+    runChatUpdate(update.chatId, listener ->
+      listener.onChatBusinessBotManageBarChanged(update.chatId, update.businessBotManageBar)
+    );
   }
 
   // updateChatHasScheduledMessages
@@ -1567,58 +1582,41 @@ public class TdlibListeners {
 
   // updateNotificationSettings
 
-  private static void notifySettingsChanged (@Nullable Iterator<NotificationSettingsListener> list, TdApi.NotificationSettingsScope scope, TdApi.ScopeNotificationSettings settings) {
-    if (list != null) {
-      while (list.hasNext()) {
-        list.next().onNotificationSettingsChanged(scope, settings);
-      }
-    }
-  }
-
-  private static void notifySettingsChanged (@Nullable Iterator<NotificationSettingsListener> list, long chatId, TdApi.ChatNotificationSettings settings) {
-    if (list != null) {
-      while (list.hasNext()) {
-        list.next().onNotificationSettingsChanged(chatId, settings);
-      }
-    }
-  }
-
-  private static void notifyChannelChanged (@Nullable Iterator<NotificationSettingsListener> list, TdApi.NotificationSettingsScope scope) {
-    if (list != null) {
-      while (list.hasNext()) {
-        list.next().onNotificationChannelChanged(scope);
-      }
-    }
-  }
-
-  private static void notifyChannelChanged (@Nullable Iterator<NotificationSettingsListener> list, long chatId) {
-    if (list != null) {
-      while (list.hasNext()) {
-        list.next().onNotificationChannelChanged(chatId);
-      }
-    }
-  }
-
   @TdlibThread
   void updateNotificationSettings (TdApi.UpdateChatNotificationSettings update) {
-    notifySettingsChanged(settingsListeners.iterator(), update.chatId, update.notificationSettings);
-    notifySettingsChanged(chatSettingsListeners.iterator(update.chatId), update.chatId, update.notificationSettings);
+    RunnableData<NotificationSettingsListener> act = listener ->
+      listener.onNotificationSettingsChanged(update.chatId, update.notificationSettings);
+    runUpdate(settingsListeners.iterator(), act);
+    runUpdate(chatSettingsListeners.iterator(update.chatId), act);
   }
 
   @TdlibThread
   void updateNotificationSettings (TdApi.UpdateScopeNotificationSettings update) {
-    notifySettingsChanged(settingsListeners.iterator(), update.scope, update.notificationSettings);
+    runUpdate(settingsListeners.iterator(), listener ->
+      listener.onNotificationSettingsChanged(update.scope, update.notificationSettings)
+    );
+  }
+
+  @TdlibThread
+  void updateReactionNotificationSettings (TdApi.UpdateReactionNotificationSettings update) {
+    runUpdate(settingsListeners.iterator(), listener ->
+      listener.onReactionNotificationSettingsChanged(update.notificationSettings)
+    );
   }
 
   @AnyThread
   void updateNotificationChannel (TdApi.NotificationSettingsScope scope) {
-    notifyChannelChanged(settingsListeners.iterator(), scope);
+    runUpdate(settingsListeners.iterator(), listener ->
+      listener.onNotificationChannelChanged(scope)
+    );
   }
 
   @AnyThread
   void updateNotificationChannel (long chatId) {
-    notifyChannelChanged(settingsListeners.iterator(), chatId);
-    notifyChannelChanged(chatSettingsListeners.iterator(chatId), chatId);
+    RunnableData<NotificationSettingsListener> act = listener ->
+      listener.onNotificationChannelChanged(chatId);
+    runUpdate(settingsListeners.iterator(), act);
+    runUpdate(chatSettingsListeners.iterator(chatId), act);
   }
 
   @AnyThread
@@ -1705,6 +1703,20 @@ public class TdlibListeners {
   public void updatePrivacySettingRules (TdApi.UserPrivacySetting setting, TdApi.UserPrivacySettingRules rules) {
     for (PrivacySettingsListener listener : privacySettingsListeners) {
       listener.onPrivacySettingRulesChanged(setting, rules);
+    }
+  }
+
+  @AnyThread
+  public void updateReadDatePrivacySettings (TdApi.ReadDatePrivacySettings settings) {
+    for (PrivacySettingsListener listener : privacySettingsListeners) {
+      listener.onReadDatePrivacySettingsChanged(settings);
+    }
+  }
+
+  @AnyThread
+  public void updateNewChatPrivacySettings (TdApi.NewChatPrivacySettings settings) {
+    for (PrivacySettingsListener listener : privacySettingsListeners) {
+      listener.onNewChatPrivacySettingsChanged(settings);
     }
   }
 
@@ -1890,6 +1902,24 @@ public class TdlibListeners {
   void updateSuggestedActions (TdApi.UpdateSuggestedActions update) {
     for (TdlibOptionListener listener : optionListeners) {
       listener.onSuggestedActionsChanged(update.addedActions, update.removedActions);
+    }
+  }
+
+  void updateChatRevenueAmount (TdApi.UpdateChatRevenueAmount update) {
+    for (TdlibOptionListener listener : optionListeners) {
+      listener.onChatRevenueUpdated();
+    }
+  }
+
+  void updateSpeedLimitNotification (TdApi.UpdateSpeedLimitNotification update) {
+    for (TdlibOptionListener listener : optionListeners) {
+      listener.onSpeedLimitNotification(update.isUpload);
+    }
+  }
+
+  void updateContactCloseBirthdayUsers (TdApi.UpdateContactCloseBirthdays update) {
+    for (TdlibOptionListener listener : optionListeners) {
+      listener.onContactCloseBirthdayUsersChanged(update.closeBirthdayUsers);
     }
   }
 }

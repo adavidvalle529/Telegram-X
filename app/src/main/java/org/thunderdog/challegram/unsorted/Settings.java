@@ -82,6 +82,7 @@ import org.thunderdog.challegram.util.Crash;
 import org.thunderdog.challegram.util.CustomTypefaceSpan;
 import org.thunderdog.challegram.util.DeviceStorageError;
 import org.thunderdog.challegram.util.DeviceTokenType;
+import org.thunderdog.challegram.util.FeatureAvailability;
 import org.thunderdog.challegram.util.StringList;
 
 import java.io.File;
@@ -179,7 +180,9 @@ public class Settings {
   private static final int VERSION_43 = 43; // optimize recent custom emoji
   private static final int VERSION_44 = 44; // 8-bit -> 32-bit account flags
   private static final int VERSION_45 = 45; // Reset "Big emoji" setting to default
-  private static final int VERSION = VERSION_45;
+  private static final int VERSION_46 = 46; // Remove folders experimental setting
+  private static final int VERSION_47 = 47; // Force reset released features list
+  private static final int VERSION = VERSION_47;
 
   private static final AtomicBoolean hasInstance = new AtomicBoolean(false);
   private static volatile Settings instance;
@@ -198,6 +201,9 @@ public class Settings {
   }
 
   private static final String KEY_VERSION = "version";
+  private static final String KEY_FEATURES = "features";
+  private static final String KEY_FEATURES_ADDED_NOTIFICATIONS = "features_new";
+  private static final String KEY_FEATURES_REMOVED_NOTIFICATIONS = "features_gone";
   private static final String KEY_OTHER = "settings_other";
   private static final String KEY_OTHER_NEW = "settings_other2";
   private static final String KEY_EXPERIMENTS = "settings_experiments";
@@ -414,10 +420,14 @@ public class Settings {
   public static final long SETTING_FLAG_NO_EMBEDS = 1 << 13;
   public static final long SETTING_FLAG_LIMIT_STICKERS_FPS = 1 << 14;
   public static final long SETTING_FLAG_EXPAND_RECENT_STICKERS = 1 << 15;
+  public static final long SETTING_FLAG_FOREGROUND_SERVICE_ENABLED = 1 << 16;
+  public static final long SETTING_FLAG_DYNAMIC_ORDER_STICKER_PACKS = 1 << 17;
+  public static final long SETTING_FLAG_DYNAMIC_ORDER_EMOJI_PACKS = 1 << 18;
 
   public static final long EXPERIMENT_FLAG_ALLOW_EXPERIMENTS = 1;
-  public static final long EXPERIMENT_FLAG_ENABLE_FOLDERS = 1 << 1;
   public static final long EXPERIMENT_FLAG_SHOW_PEER_IDS = 1 << 2;
+
+  public static final long REMOVED_EXPERIMENT_FLAG_ENABLE_FOLDERS = 1 << 1;
 
   private static final @Deprecated int DISABLED_FLAG_OTHER_NEED_RAISE_TO_SPEAK = 1 << 2;
   private static final @Deprecated int DISABLED_FLAG_OTHER_AUTODOWNLOAD_IN_BACKGROUND = 1 << 3;
@@ -862,10 +872,21 @@ public class Settings {
       pmc.remove(KEY_TUTORIAL);
       pmc.removeByPrefix(KEY_TUTORIAL_PSA);
     }
+    if (Config.TEST_NEW_FEATURES_PROMPTS) {
+      forceRevokeAllFeaturePrompts();
+    }
     trackInstalledApkVersion();
+    trackChangesInAvailableFeatures();
     Log.i("Opened database in %dms", SystemClock.uptimeMillis() - ms);
     checkPendingPasscodeLocks();
     applyLogSettings(true);
+  }
+
+  public void forceRevokeAllFeaturePrompts () {
+    pmc
+      .putLong(KEY_FEATURES, 0 /*no features were available*/)
+      .remove(KEY_FEATURES_ADDED_NOTIFICATIONS)
+      .remove(KEY_FEATURES_REMOVED_NOTIFICATIONS);
   }
 
   // Schedule
@@ -1340,8 +1361,9 @@ public class Settings {
   }
 
   private long getExperiments () {
-    if (_experiments == null)
+    if (_experiments == null) {
       _experiments = pmc.getLong(KEY_EXPERIMENTS, makeDefaultExperiments());
+    }
     return _experiments;
   }
 
@@ -2158,6 +2180,20 @@ public class Settings {
       }
       case VERSION_45: {
         resetOtherFlag(pmc, editor, FLAG_OTHER_DISABLE_BIG_EMOJI, false);
+        break;
+      }
+      case VERSION_46: {
+        long experiments = pmc.getLong(KEY_EXPERIMENTS, makeDefaultExperiments());
+        if (BitwiseUtils.hasFlag(experiments, REMOVED_EXPERIMENT_FLAG_ENABLE_FOLDERS)) {
+          experiments &= ~REMOVED_EXPERIMENT_FLAG_ENABLE_FOLDERS;
+          editor.putLong(KEY_EXPERIMENTS, experiments);
+        }
+        break;
+      }
+      case VERSION_47: {
+        // No features were officially available before VERSION_46.
+        // Reset just once in VERSION_47 right prior to stable release.
+        editor.putLong(KEY_FEATURES, 0);
         break;
       }
     }
@@ -3219,11 +3255,16 @@ public class Settings {
     }
 
     public int getOutputFrameRate (int frameRate) {
-      return fps > 0 ? Math.min(frameRate, this.fps) : DEFAULT_FRAME_RATE;
+      return Math.min(
+        frameRate > 0 ? frameRate : DEFAULT_FRAME_RATE,
+        fps > 0 ? fps : DEFAULT_FRAME_RATE
+      );
     }
 
+    public static final double BITRATE_SCALE = 0.109;
+
     public long getOutputBitrate (Settings.VideoSize size, int frameRate, long inputBitrate) {
-      return Math.round((size.majorSize * size.minorSize * frameRate) * 0.089);
+      return Math.round((size.majorSize * size.minorSize * frameRate) * BITRATE_SCALE);
     }
 
     @Nullable
@@ -6895,7 +6936,7 @@ public class Settings {
     return pmc.getLong(KEY_APP_INSTALLATION_ID, 0);
   }
 
-  public void trackInstalledApkVersion () {
+  private void trackInstalledApkVersion () {
     final long knownCommitDate = pmc.getLong(KEY_APP_COMMIT_DATE, 0);
     if (AppBuildInfo.maxBuiltInCommitDate() <= knownCommitDate) {
       // Track only updates with more recent commits.
@@ -6910,6 +6951,108 @@ public class Settings {
     pmc.apply();
     this.currentBuildInformation = buildInfo;
     resetAppVersionPushMessageCount();
+  }
+
+  private void trackChangesInAvailableFeatures () {
+    final long currentlyAvailableFeatures = FeatureAvailability.currentlyAvailableFeatures();
+    long previouslyAvailableFeatures;
+    boolean saveFeatures = false;
+    try {
+      previouslyAvailableFeatures = pmc.tryGetLong(KEY_FEATURES);
+    } catch (FileNotFoundException e) {
+      long previousInstallationId = currentBuildInformation != null ? currentBuildInformation.getInstallationId() - 1 : -1;
+      int previouslyInstalledVersionCode = previousInstallationId != -1 ?
+        AppBuildInfo.restoreVersionCode(pmc, KEY_APP_INSTALLATION_PREFIX + previousInstallationId) : 0;
+      previouslyAvailableFeatures = FeatureAvailability.recoverAvailableFeaturesForAppVersionCode(previouslyInstalledVersionCode);
+      saveFeatures = true;
+    }
+    if (currentlyAvailableFeatures != previouslyAvailableFeatures) {
+      final long recentlyAddedFeatures = currentlyAvailableFeatures & (~previouslyAvailableFeatures);
+      final long recentlyRemovedFeatures = previouslyAvailableFeatures & (~currentlyAvailableFeatures);
+
+      long addedFeaturesNotifications = pmc.getLong(KEY_FEATURES_ADDED_NOTIFICATIONS, 0);
+      long removedFeaturesNotifications = pmc.getLong(KEY_FEATURES_REMOVED_NOTIFICATIONS, 0);
+
+      addedFeaturesNotifications &= ~recentlyRemovedFeatures;
+      addedFeaturesNotifications |= recentlyAddedFeatures;
+
+      removedFeaturesNotifications &= ~recentlyAddedFeatures;
+      removedFeaturesNotifications |= recentlyRemovedFeatures;
+
+      pmc.edit()
+        .putLong(KEY_FEATURES_ADDED_NOTIFICATIONS, addedFeaturesNotifications)
+        .putLong(KEY_FEATURES_REMOVED_NOTIFICATIONS, removedFeaturesNotifications)
+        .apply();
+
+      this._addedFeaturesNotifications = addedFeaturesNotifications;
+      this._removedFeaturesNotifications = removedFeaturesNotifications;
+
+      saveFeatures = true;
+    }
+    if (saveFeatures) {
+      pmc.putLong(KEY_FEATURES, currentlyAvailableFeatures);
+    }
+  }
+
+  public interface FeatureAvailabilityNotificationDismissListener {
+    void onDismissFeatureAvailabilityNotification (@FeatureAvailability.Feature long feature, boolean wasAdded, boolean wasRemoved);
+  }
+
+  private ReferenceList<FeatureAvailabilityNotificationDismissListener> featureNotificationDismissListeners;
+
+  public void addFeatureAvailabilityNotificationDismissListener (FeatureAvailabilityNotificationDismissListener listener) {
+    if (this.featureNotificationDismissListeners == null) {
+      this.featureNotificationDismissListeners = new ReferenceList<>();
+    }
+    this.featureNotificationDismissListeners.add(listener);
+  }
+
+  public void removeFeatureAvailabilityNotificationDismissListener (FeatureAvailabilityNotificationDismissListener listener) {
+    if (this.featureNotificationDismissListeners != null) {
+      this.featureNotificationDismissListeners.remove(listener);
+    }
+  }
+
+  private Long _addedFeaturesNotifications, _removedFeaturesNotifications;
+
+  public long getAddedFeaturesNotifications () {
+    if (_addedFeaturesNotifications == null) {
+      _addedFeaturesNotifications = pmc.getLong(KEY_FEATURES_ADDED_NOTIFICATIONS, 0);
+    }
+    return _addedFeaturesNotifications;
+  }
+
+  public long getRemovedFeaturesNotifications () {
+    if (_removedFeaturesNotifications == null) {
+      _removedFeaturesNotifications = pmc.getLong(KEY_FEATURES_REMOVED_NOTIFICATIONS, 0);
+    }
+    return _removedFeaturesNotifications;
+  }
+
+  public void revokeFeatureNotifications (@FeatureAvailability.Feature long feature) {
+    long addedFeaturesNotifications = getAddedFeaturesNotifications();
+    long removedFeaturesNotifications = getRemovedFeaturesNotifications();
+    boolean wasAdded = BitwiseUtils.hasFlag(addedFeaturesNotifications, feature);
+    boolean wasRemoved = BitwiseUtils.hasFlag(removedFeaturesNotifications, feature);
+    if (wasAdded || wasRemoved) {
+      addedFeaturesNotifications &= ~feature;
+      removedFeaturesNotifications &= ~feature;
+      pmc.edit()
+        .putLong(KEY_FEATURES_ADDED_NOTIFICATIONS, addedFeaturesNotifications)
+        .putLong(KEY_FEATURES_REMOVED_NOTIFICATIONS, removedFeaturesNotifications)
+        .apply();
+      this._addedFeaturesNotifications = addedFeaturesNotifications;
+      this._removedFeaturesNotifications = removedFeaturesNotifications;
+      if (featureNotificationDismissListeners != null) {
+        for (FeatureAvailabilityNotificationDismissListener listener : featureNotificationDismissListeners) {
+          listener.onDismissFeatureAvailabilityNotification(feature, wasAdded, wasRemoved);
+        }
+      }
+    }
+  }
+
+  public boolean hasPendingFeatureAddedNotification (@FeatureAvailability.Feature long feature) {
+    return BitwiseUtils.hasAllFlags(getAddedFeaturesNotifications(), feature);
   }
 
   public AppBuildInfo getFirstBuildInformation () {
@@ -7039,7 +7182,7 @@ public class Settings {
   }
 
   public boolean chatFoldersEnabled () {
-    return Config.CHAT_FOLDERS_ENABLED && isExperimentEnabled(EXPERIMENT_FLAG_ENABLE_FOLDERS);
+    return FeatureAvailability.Released.CHAT_FOLDERS;
   }
 
   public boolean showPeerIds () {

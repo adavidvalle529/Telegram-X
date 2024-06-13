@@ -92,7 +92,6 @@ public class ListItem {
   public static final int TYPE_CHAT_SMALL = 63;
   public static final int TYPE_CHAT_SMALL_SELECTABLE = 64;
   public static final int TYPE_EDITTEXT_WITH_PHOTO = 65;
-  public static final int TYPE_EDITTEXT_WITH_PHOTO_SMALLER = 66;
   public static final int TYPE_RADIO_SETTING_WITH_NEGATIVE_STATE = 67;
   public static final int TYPE_EDITTEXT_CHANNEL_DESCRIPTION = 68;
   public static final int TYPE_CHECKBOX_OPTION_WITH_AVATAR = 69;
@@ -184,7 +183,8 @@ public class ListItem {
 
   private @Nullable DrawModifier drawModifier;
 
-  private String stringKey, stringValue;
+  private String stringKey;
+  private CharSequence stringValue;
   private @PorterDuffColorId int textColorId;
   private TdlibAccentColor accentColor;
   private int textPaddingLeft, textPaddingRight;
@@ -377,12 +377,12 @@ public class ListItem {
     return textPaddingRight;
   }
 
-  public ListItem setStringValue (String value) {
+  public ListItem setStringValue (CharSequence value) {
     this.stringValue = value;
     return this;
   }
 
-  public boolean setStringValueIfChanged (String value) {
+  public boolean setStringValueIfChanged (CharSequence value) {
     if (!StringUtils.equalsOrBothEmpty(this.stringValue, value)) {
       this.stringValue = value;
       return true;
@@ -391,6 +391,10 @@ public class ListItem {
   }
 
   public String getStringValue () {
+    return stringValue != null ? stringValue.toString() : null;
+  }
+
+  public CharSequence getCharSequenceValue () {
     return stringValue;
   }
 

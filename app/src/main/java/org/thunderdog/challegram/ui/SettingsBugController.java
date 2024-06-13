@@ -60,6 +60,7 @@ import org.thunderdog.challegram.unsorted.Settings;
 import org.thunderdog.challegram.unsorted.Test;
 import org.thunderdog.challegram.util.AppUpdater;
 import org.thunderdog.challegram.util.Crash;
+import org.thunderdog.challegram.util.FeatureAvailability;
 import org.thunderdog.challegram.util.StringList;
 import org.thunderdog.challegram.v.CustomRecyclerView;
 import org.thunderdog.challegram.voip.VoIP;
@@ -735,18 +736,17 @@ public class SettingsBugController extends RecyclerViewController<SettingsBugCon
         break;
       }
       case Section.EXPERIMENTS: {
-        if (!items.isEmpty()) {
-          items.add(new ListItem(ListItem.TYPE_SHADOW_TOP));
-        }
-        items.add(new ListItem(ListItem.TYPE_RADIO_SETTING, R.id.btn_experiment, 0, R.string.Experiment_ChatFolders).setLongValue(Settings.EXPERIMENT_FLAG_ENABLE_FOLDERS));
-        items.add(new ListItem(ListItem.TYPE_SHADOW_BOTTOM));
-        items.add(new ListItem(ListItem.TYPE_DESCRIPTION, 0, 0, Lang.getMarkdownStringSecure(this, R.string.Experiment_ChatFoldersInfo)));
-
         if (testerLevel >= Tdlib.TESTER_LEVEL_TESTER || Settings.instance().isExperimentEnabled(Settings.EXPERIMENT_FLAG_SHOW_PEER_IDS)) {
-          items.add(new ListItem(ListItem.TYPE_SHADOW_TOP));
+          if (!items.isEmpty()) {
+            items.add(new ListItem(ListItem.TYPE_SHADOW_TOP));
+          }
           items.add(new ListItem(ListItem.TYPE_RADIO_SETTING, R.id.btn_experiment, 0, R.string.Experiment_PeerIds).setLongValue(Settings.EXPERIMENT_FLAG_SHOW_PEER_IDS));
           items.add(new ListItem(ListItem.TYPE_SHADOW_BOTTOM));
           items.add(new ListItem(ListItem.TYPE_DESCRIPTION, 0, 0, R.string.Experiment_PeerIdsInfo));
+        }
+
+        if (items.isEmpty()) {
+          items.add(new ListItem(ListItem.TYPE_EMPTY, 0, 0, R.string.ExperimentalSettingsUnavailable));
         }
 
         break;
@@ -779,6 +779,8 @@ public class SettingsBugController extends RecyclerViewController<SettingsBugCon
           }
 
           if (testerLevel >= Tdlib.TESTER_LEVEL_DEVELOPER) {
+            items.add(new ListItem(ListItem.TYPE_SEPARATOR_FULL));
+            items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_secret_attest, 0, "Test attest", false));
             if (tdlib.isAuthorized()) {
               items.add(new ListItem(ListItem.TYPE_SEPARATOR_FULL));
               items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_secret_sendAllChangeLogs, 0, "Send all change logs", false));
@@ -857,6 +859,8 @@ public class SettingsBugController extends RecyclerViewController<SettingsBugCon
             if (items.size() > initialSize)
               items.add(new ListItem(ListItem.TYPE_SEPARATOR_FULL));
             items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_secret_qrTest, 0, "Test QR scanner", false));
+            items.add(new ListItem(ListItem.TYPE_SEPARATOR_FULL));
+            items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_secret_testPrompts, 0, "Show prompts on next app launch", false));
           }
         }
 
@@ -1183,15 +1187,30 @@ public class SettingsBugController extends RecyclerViewController<SettingsBugCon
         builder.addHeaderItem("Disabling all tgcalls versions enables libtgvoip " + VoIPController.getVersion() + " without tgcalls wrapper.");
       } else {
         int index = 0;
-        items.add(new ListItem(ListItem.TYPE_CHECKBOX_OPTION, viewId, 0, "Acoustic Echo Cancellation", !VoIP.needDisableAcousticEchoCancellation()).setIntValue(index++));
-        items.add(new ListItem(ListItem.TYPE_CHECKBOX_OPTION, viewId, 0, "Noise Suppression", !VoIP.needDisableNoiseSuppressor()).setIntValue(index++));
-        items.add(new ListItem(ListItem.TYPE_CHECKBOX_OPTION, viewId, 0, "Automatic Gain Control", !VoIP.needDisableAutomaticGainControl()).setIntValue(index++));
+        int[] options = VoIP.getAllDebugOptions();
+        for (@VoIP.DebugOption int option : options) {
+          items.add(new ListItem(ListItem.TYPE_CHECKBOX_OPTION, viewId, 0, VoIP.getDebugOptionName(option), VoIP.isDebugOptionEnabled(option))
+            .setIntValue(option)
+          );
+        }
       }
 
       builder.setRawItems(items);
       builder.setDisableToggles(true);
-      builder.setOnSettingItemClick((view, settingsId, item, doneButton, settingsAdapter) -> {
+      builder.setOnSettingItemClick((view, settingsId, item, doneButton, settingsAdapter, window) -> {
         if (item.getViewType() == ListItem.TYPE_CHECKBOX_OPTION && item.getId() == viewId) {
+          if (viewId == R.id.btn_secret_tgcallsOptions && !item.isSelected()) {
+            //noinspection WrongConstant
+            @VoIP.DebugOption int option = item.getIntValue();
+            if ((VoIP.DebugOption.SERVER_FILTERS_MASK & option) != 0) {
+              for (ListItem otherItem : settingsAdapter.getItems()) {
+                if (otherItem != item && otherItem.getId() == viewId && otherItem.isSelected() && ((VoIP.DebugOption.SERVER_FILTERS_MASK & otherItem.getIntValue()) != 0)) {
+                  window.showErrorTooltip(this, view, "You can enable only one server filter at a time");
+                  return;
+                }
+              }
+            }
+          }
           final boolean isSelect = settingsAdapter.toggleView(view);
           item.setSelected(isSelect);
         }
@@ -1208,11 +1227,8 @@ public class SettingsBugController extends RecyclerViewController<SettingsBugCon
               String version = item.getStringValue();
               VoIP.setForceDisableVersion(version, !isEnabled);
             } else if (viewId == R.id.btn_secret_tgcallsOptions) {
-              switch (item.getIntValue()) {
-                case 0: VoIP.setForceDisableAcousticEchoCancellation(!isEnabled); break;
-                case 1: VoIP.setForceDisableNoiseSuppressor(!isEnabled); break;
-                case 2: VoIP.setForceDisableAutomaticGainControl(!isEnabled); break;
-              }
+              //noinspection WrongConstant
+              VoIP.setDebugOptionEnabled(item.getIntValue(), isEnabled);
             }
           }
         }
@@ -1237,6 +1253,8 @@ public class SettingsBugController extends RecyclerViewController<SettingsBugCon
     } else if (viewId == R.id.btn_secret_disableNetwork) {
       Settings.instance().setDisableNetwork(adapter.toggleView(v));
       TdlibManager.instance().watchDog().letsHelpDoge();
+    } else if (viewId == R.id.btn_secret_testPrompts) {
+      Settings.instance().forceRevokeAllFeaturePrompts();
     } else if (viewId == R.id.btn_secret_forceTdlibRestarts) {
       TdlibManager.instance().setForceTdlibRestarts(adapter.toggleView(v));
     } else if (viewId == R.id.btn_secret_forceTcpInCalls) {
@@ -1370,6 +1388,12 @@ public class SettingsBugController extends RecyclerViewController<SettingsBugCon
       });
     } else if (viewId == R.id.btn_secret_resetLocalNotificationSettings) {
       tdlib.notifications().resetNotificationSettings(true);
+    } else if (viewId == R.id.btn_secret_attest) {
+      tdlib.requestPlayIntegrity(-1, StringUtils.random("0123456789abcdef", 32), (result, isError) -> {
+        runOnUiThread(() -> {
+          openAlert(R.string.AppName, result);
+        });
+      });
     } else if (viewId == R.id.btn_secret_databaseStats) {
       String stats = Settings.instance().pmc().getProperty("leveldb.stats") + "\n\n" + "Memory usage: " + Settings.instance().pmc().getProperty("leveldb.approximate-memory-usage");
       TextController c = new TextController(context, tdlib);
@@ -1478,7 +1502,7 @@ public class SettingsBugController extends RecyclerViewController<SettingsBugCon
       }
     })
       .setAllowResize(false);
-    b.setOnSettingItemClick((view, settingsId, item, doneButton, settingsAdapter) -> {
+    b.setOnSettingItemClick((view, settingsId, item, doneButton, settingsAdapter, window) -> {
       //noinspection ResourceType
       if (item.getId() == 7 && wrap[0] != null && wrap[0].window != null && !wrap[0].window.isWindowHidden()) {
         wrap[0].window.hideWindow(true);

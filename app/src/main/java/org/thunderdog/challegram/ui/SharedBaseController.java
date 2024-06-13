@@ -20,6 +20,7 @@ import android.util.SparseIntArray;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
@@ -283,7 +284,9 @@ public abstract class SharedBaseController <T extends MessageSourceProvider> ext
 
   @Override
   public abstract CharSequence getName ();
-  // public abstract @DrawableRes int getIcon ();
+
+  @DrawableRes
+  public abstract int getIcon ();
 
   public final @Nullable String getCurrentQuery () {
     return currentQuery;
@@ -510,7 +513,7 @@ public abstract class SharedBaseController <T extends MessageSourceProvider> ext
 
   protected TdApi.Function<?> buildRequest (final long chatId, final long messageThreadId, final String query, final long offset, final String secretOffset, final int limit) {
     if (StringUtils.isEmpty(query) || !ChatId.isSecret(chatId)) {
-      return new TdApi.SearchChatMessages(chatId, query, null, offset, 0, limit, provideSearchFilter(), messageThreadId, /*TODO*/ null);
+      return new TdApi.SearchChatMessages(chatId, query, null, offset, 0, limit, provideSearchFilter(), messageThreadId, 0);
     } else {
       return new TdApi.SearchSecretMessages(chatId, query, secretOffset, limit, provideSearchFilter());
     }

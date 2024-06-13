@@ -1000,7 +1000,8 @@ public class TdlibCache implements LiveLocationManager.OutputDelegate, CleanupSt
     Letters avatarLetters = userLetters(user);
     int extraDrawableRes = /*tdlib.isSelfUserId(user.id) ? R.drawable.baseline_add_a_photo_56 :*/
       /*tdlib.isRepliesChat(ChatId.fromUserId(user.id)) ? R.drawable.baseline_reply_56 :*/
-      TD.isBot(user) ? R.drawable.deproko_baseline_bots_56 :
+      TD.isBot(user) ?
+        (((TdApi.UserTypeBot) user.type).canBeEdited ? R.drawable.baseline_add_a_photo_56 : R.drawable.deproko_baseline_bots_56) :
       R.drawable.baseline_person_56;
     return new AvatarPlaceholder.Metadata(accentColor, avatarLetters, 0, extraDrawableRes);
   }
@@ -1349,9 +1350,7 @@ public class TdlibCache implements LiveLocationManager.OutputDelegate, CleanupSt
     }
   }
 
-  @Deprecated
   /*pacakge*/ long myUserId () {
-    // TODO move myUserId to TdlibContext
     return myUserId;
   }
 
@@ -1359,9 +1358,7 @@ public class TdlibCache implements LiveLocationManager.OutputDelegate, CleanupSt
     return myUserId == userId;
   }
 
-  @Deprecated
   public @Nullable TdApi.User myUser () {
-    // TODO move to TdlibContext
     TdApi.User result;
     synchronized (dataLock) {
       result = myUserId != 0 ? users.get(myUserId) : null;
@@ -1543,7 +1540,7 @@ public class TdlibCache implements LiveLocationManager.OutputDelegate, CleanupSt
       for (int i = size - 1; i >= 0; i--) {
         TdApi.Message msg = outputLocations.get(i);
         if (chatId == 0 || msg.chatId == chatId) {
-          tdlib.client().send(new TdApi.EditMessageLiveLocation(msg.chatId, msg.id, null, null, 0, 0), tdlib.silentHandler());
+          tdlib.client().send(new TdApi.EditMessageLiveLocation(msg.chatId, msg.id, null, null, 0, 0, 0), tdlib.silentHandler());
         }
       }
     }
@@ -1580,24 +1577,19 @@ public class TdlibCache implements LiveLocationManager.OutputDelegate, CleanupSt
     synchronized (outputLocations) {
       Log.v("Updating %d live location messages", outputLocations.size());
       for (final TdApi.Message message : outputLocations) {
-        tdlib.client().send(new TdApi.EditMessageLiveLocation(message.chatId, message.id, message.replyMarkup, location, heading, 0), object -> {
-          switch (object.getConstructor()) {
-            case TdApi.Message.CONSTRUCTOR: {
-              TdApi.Message resultMessage = (TdApi.Message) object;
-              message.editDate = resultMessage.editDate;
-              if (Td.isLocation(resultMessage.content)) {
-                TdApi.MessageLocation in = (TdApi.MessageLocation) resultMessage.content;
-                TdApi.MessageLocation out = (TdApi.MessageLocation) message.content;
-                out.expiresIn = in.livePeriod;
-                out.location.latitude = in.location.latitude;
-                out.location.longitude = in.location.longitude;
-                onLiveLocationChanged(message);
-              }
-              break;
+        tdlib.send(new TdApi.EditMessageLiveLocation(message.chatId, message.id, message.replyMarkup, location, 0, heading, 0), (resultMessage, error) -> {
+          if (error != null) {
+            Log.e("Error broadcasting location: %s", TD.toErrorString(error));
+          } else {
+            message.editDate = resultMessage.editDate;
+            if (Td.isLocation(resultMessage.content)) {
+              TdApi.MessageLocation in = (TdApi.MessageLocation) resultMessage.content;
+              TdApi.MessageLocation out = (TdApi.MessageLocation) message.content;
+              out.expiresIn = in.livePeriod;
+              out.location.latitude = in.location.latitude;
+              out.location.longitude = in.location.longitude;
+              onLiveLocationChanged(message);
             }
-            case TdApi.Error.CONSTRUCTOR:
-              Log.e("Error broadcasting location: %s", TD.toErrorString(object));
-              break;
           }
         });
       }

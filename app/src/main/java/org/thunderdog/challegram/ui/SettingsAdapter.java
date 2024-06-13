@@ -73,6 +73,7 @@ import org.thunderdog.challegram.util.FloatListener;
 import org.thunderdog.challegram.util.HeightChangeListener;
 import org.thunderdog.challegram.util.SelectableItemDelegate;
 import org.thunderdog.challegram.v.CustomRecyclerView;
+import org.thunderdog.challegram.v.EditText;
 import org.thunderdog.challegram.widget.AvatarView;
 import org.thunderdog.challegram.widget.BetterChatView;
 import org.thunderdog.challegram.widget.ChartLayout;
@@ -140,7 +141,7 @@ public class SettingsAdapter extends RecyclerView.Adapter<SettingHolder> impleme
   private @Nullable SliderWrapView.RealTimeChangeListener sliderChangeListener;
 
   public interface TextChangeListener {
-    void onTextChanged (int id, ListItem item, MaterialEditTextGroup v, String text);
+    void onTextChanged (int id, ListItem item, MaterialEditTextGroup v);
   }
 
   public SettingsAdapter (ViewController<?> context) {
@@ -276,8 +277,7 @@ public class SettingsAdapter extends RecyclerView.Adapter<SettingHolder> impleme
   }
 
   @Override
-  public void onTextChanged (MaterialEditTextGroup v, CharSequence charSequence) {
-    String text = charSequence.toString();
+  public void onTextChanged (MaterialEditTextGroup v, CharSequence cs) {
     int id = ((ViewGroup) v.getParent()).getId();
     //
     ListItem item = v.getParent() != null && ((ViewGroup) v.getParent()).getTag() instanceof ListItem ? (ListItem) ((ViewGroup) v.getParent()).getTag() : null;
@@ -289,14 +289,15 @@ public class SettingsAdapter extends RecyclerView.Adapter<SettingHolder> impleme
     }
     boolean changed = true;
     if (item != null) {
-      if (!StringUtils.equalsOrBothEmpty(item.getStringValue(), text)) {
-        item.setStringValue(text);
+      CharSequence value = EditText.nonModifiableCopy(cs);
+      if (!StringUtils.equalsOrBothEmpty(item.getCharSequenceValue(), value)) {
+        item.setStringValue(value);
       } else {
         changed = false;
       }
     }
     if (changed && textChangeListener != null) {
-      textChangeListener.onTextChanged(id, item, v, text);
+      textChangeListener.onTextChanged(id, item, v);
     }
   }
 
@@ -596,7 +597,7 @@ public class SettingsAdapter extends RecyclerView.Adapter<SettingHolder> impleme
     }
   }
 
-  public void updateLockEditTextById (int id, @Nullable String text) {
+  public void updateLockEditTextById (int id, @Nullable CharSequence text) {
     int index = indexOfViewById(id);
     if (index != -1) {
       for (RecyclerView parentView : parentViews) {
@@ -696,6 +697,8 @@ public class SettingsAdapter extends RecyclerView.Adapter<SettingHolder> impleme
         View view = parentView.getLayoutManager().findViewByPosition(position);
         if (view != null && view.getId() == item.getId()) {
           if (view instanceof SettingView) {
+            ((SettingView) view).setIcon(item.getIconResource());
+            ((SettingView) view).setName(item.getString());
             setValuedSetting(item, (SettingView) view, true);
           } else {
             boolean ok = false;
@@ -1490,8 +1493,7 @@ public class SettingsAdapter extends RecyclerView.Adapter<SettingHolder> impleme
       case ListItem.TYPE_EDITTEXT_NO_PADDING_REUSABLE:
       case ListItem.TYPE_EDITTEXT_COUNTERED:
       case ListItem.TYPE_EDITTEXT_CHANNEL_DESCRIPTION:
-      case ListItem.TYPE_EDITTEXT_WITH_PHOTO:
-      case ListItem.TYPE_EDITTEXT_WITH_PHOTO_SMALLER: {
+      case ListItem.TYPE_EDITTEXT_WITH_PHOTO: {
         MaterialEditTextGroup editText = (MaterialEditTextGroup) ((ViewGroup) holder.itemView).getChildAt(0);
         editText.applyRtl(Lang.rtl());
         editText.setHint(item.getString());
@@ -2044,6 +2046,13 @@ public class SettingsAdapter extends RecyclerView.Adapter<SettingHolder> impleme
     }
   }
 
+  public void removeItem (ListItem item) {
+    int index = indexOfView(item);
+    if (index != -1) {
+      removeItem(index);
+    }
+  }
+
   @Override
   public int measureHeight (int maxHeight) {
     final int itemCount = getItemCount();
@@ -2346,7 +2355,6 @@ public class SettingsAdapter extends RecyclerView.Adapter<SettingHolder> impleme
       case ListItem.TYPE_EDITTEXT_COUNTERED:
       case ListItem.TYPE_EDITTEXT_CHANNEL_DESCRIPTION:
       case ListItem.TYPE_EDITTEXT_WITH_PHOTO:
-      case ListItem.TYPE_EDITTEXT_WITH_PHOTO_SMALLER:
         return CellFilterImpl.ABORTED;
     }
     if (item.hasStringResources())

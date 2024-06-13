@@ -77,11 +77,7 @@ public abstract class EditBaseController<T> extends ViewController<T> implements
     ViewSupport.setThemedBackground(contentView, getRecyclerBackgroundColorId(), this);
     contentView.setLayoutParams(FrameLayoutFix.newParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-    recyclerView = (RecyclerView) Views.inflate(context(), R.layout.recycler, contentView);
-    recyclerView.setItemAnimator(itemAnimator = new CustomItemAnimator(AnimatorUtils.DECELERATE_INTERPOLATOR, 180l));
-    recyclerView.setHasFixedSize(true);
-    recyclerView.setLayoutManager(new LinearLayoutManager(context, RecyclerView.VERTICAL, false));
-    recyclerView.setLayoutParams(FrameLayoutFix.newParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+    recyclerView = onCreateRecyclerView();
     contentView.addView(recyclerView);
 
     int padding = Screen.dp(4f);
@@ -110,6 +106,15 @@ public abstract class EditBaseController<T> extends ViewController<T> implements
   }
 
   public RecyclerView getRecyclerView () {
+    return recyclerView;
+  }
+
+  protected RecyclerView onCreateRecyclerView () {
+    RecyclerView recyclerView = (RecyclerView) Views.inflate(context(), R.layout.recycler, contentView);
+    recyclerView.setItemAnimator(itemAnimator = new CustomItemAnimator(AnimatorUtils.DECELERATE_INTERPOLATOR, 180l));
+    recyclerView.setHasFixedSize(true);
+    recyclerView.setLayoutManager(new LinearLayoutManager(context, RecyclerView.VERTICAL, false));
+    recyclerView.setLayoutParams(FrameLayoutFix.newParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
     return recyclerView;
   }
 
@@ -178,12 +183,16 @@ public abstract class EditBaseController<T> extends ViewController<T> implements
   }
 
   protected void setDoneVisible (boolean isVisible) {
+    setDoneVisible(isVisible, true);
+  }
+
+  protected void setDoneVisible (boolean isVisible, boolean allowAnimation) {
     if (this.doneVisible != isVisible) {
       this.doneVisible = isVisible;
       if (contentView.getParent() != null && doneButton.getMeasuredWidth() != 0 && isFocused()) {
         this.doneVisibilityFactor = 1f;
         doneButton.setMaximumAlpha(1f);
-        doneButton.setIsVisible(isVisible, true);
+        doneButton.setIsVisible(isVisible, allowAnimation);
       } else {
         if (isVisible) {
           if (needShowAnimationDelay()) {

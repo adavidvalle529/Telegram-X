@@ -50,6 +50,7 @@ import me.vkryl.core.BitwiseUtils;
 import me.vkryl.core.ColorUtils;
 import me.vkryl.core.MathUtils;
 
+@SuppressWarnings("unchecked")
 public class GifReceiver implements GifWatcher, Runnable, Receiver {
   private static final int STATE_LOADED = 0x01;
 
@@ -100,7 +101,6 @@ public class GifReceiver implements GifWatcher, Runnable, Receiver {
     this.croppedClipRegion = new RectF();
   }
 
-  /** @noinspection unchecked*/
   @Override
   public final GifReceiver setUpdateListener (ReceiverUpdateListener listener) {
     this.updateListener = listener;

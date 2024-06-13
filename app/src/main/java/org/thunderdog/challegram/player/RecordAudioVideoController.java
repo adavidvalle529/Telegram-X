@@ -347,7 +347,7 @@ public class RecordAudioVideoController implements
       this.switchCameraButton.setIsSmall();
       this.switchCameraButtonWrap = new FrameLayoutFix(context);
       Views.setClickable(switchCameraButtonWrap);
-      RippleSupport.setCircleBackground(switchCameraButtonWrap, 33f, 3f, ColorId.filling);
+      RippleSupport.setCircleBackground(switchCameraButtonWrap, 33f, 3f, ColorId.filling, true, null);
       this.switchCameraButtonWrap.setLayoutParams(FrameLayoutFix.newParams(Screen.dp(33f) + Screen.dp(3f) * 2, Screen.dp(33f) + Screen.dp(3f) * 2));
       this.switchCameraButtonWrap.setOnClickListener(v -> {
         if (ownedCamera != null) {
@@ -1668,7 +1668,11 @@ public class RecordAudioVideoController implements
         tdlib.client().send(new TdApi.CancelPreliminaryUploadFile(roundFile.id), tdlib.okHandler());
         double startTimeSeconds = videoPreviewView.getStartTime();
         double endTimeSeconds = videoPreviewView.getEndTime();
-        String conversion = VideoGenerationInfo.makeConversion(roundFile.id, false, 0, (long) (startTimeSeconds * 1_000_000), (long) (endTimeSeconds * 1_000_000), true, 0);
+        String conversion = VideoGenerationInfo.makeConversion(roundFile.id, false, 0,
+          (long) (startTimeSeconds * 1_000_000), (long) (endTimeSeconds * 1_000_000),
+          true, null,
+          0
+        );
         TdApi.InputFileGenerated trimmedFile = new TdApi.InputFileGenerated(roundFile.local.path, conversion, 0);
         sendVideoNote(new TdApi.InputMessageVideoNote(trimmedFile, null, (int) Math.round(endTimeSeconds - startTimeSeconds), VIDEO_NOTE_LENGTH, null), initialSendOptions, null);
       } else {

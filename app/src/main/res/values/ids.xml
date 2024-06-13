@@ -101,7 +101,8 @@
   <item type="id" name="more_btn_addMember" />
   <item type="id" name="more_btn_editDescription" />
   <item type="id" name="more_btn_join" />
-  <item type="id" name="more_btn_archiveUnarchive" />
+  <item type="id" name="more_btn_archive" />
+  <item type="id" name="more_btn_unarchive" />
   <item type="id" name="more_btn_selectAll" />
   <item type="id" name="more_btn_markAsRead" />
   <item type="id" name="more_btn_report" />
@@ -245,6 +246,7 @@
   <item type="id" name="controller_sponsoredMessagesInfo" />
   <item type="id" name="controller_featureToggles" />
   <item type="id" name="controller_chatFolders" />
+  <item type="id" name="controller_chatFoldersFeature" />
   <item type="id" name="controller_editChatFolderInviteLink" />
   <item type="id" name="controller_chatFolderInviteLink" />
   <item type="id" name="controller_editChatFolders" />
@@ -425,6 +427,8 @@
   <item type="id" name="btn_hidden" />
   <item type="id" name="btn_visible" />
   <item type="id" name="btn_channelType" />
+  <item type="id" name="btn_botDescription" />
+  <item type="id" name="btn_botEdit" />
   <item type="id" name="btn_linkedChat" />
   <item type="id" name="btn_paintType" />
   <item type="id" name="btn_recentActions" />
@@ -529,6 +533,8 @@
   <item type="id" name="btn_night" />
   <item type="id" name="btn_bubble" />
   <item type="id" name="btn_notifications" />
+  <item type="id" name="btn_birthdate" />
+  <item type="id" name="btn_addBirthdate" />
   <item type="id" name="btn_groupsInCommon" />
   <item type="id" name="btn_chatBackground" />
   <item type="id" name="btn_forcePlainChannels" />
@@ -543,6 +549,9 @@
   <item type="id" name="btn_blockedSenders" />
   <item type="id" name="btn_sessions" />
   <item type="id" name="btn_2fa" />
+  <item type="id" name="btn_loginEmail" />
+  <item type="id" name="btn_changeEmail" />
+  <item type="id" name="btn_suggestion" />
   <item type="id" name="btn_accountTTL" />
   <item type="id" name="btn_loggedWebsites" />
   <item type="id" name="btn_clearPaymentAndShipping" />
@@ -552,7 +561,9 @@
   <item type="id" name="btn_closeCall" />
   <item type="id" name="btn_declineCall" />
   <item type="id" name="btn_lastSeen" />
+  <item type="id" name="btn_newChatsPrivacy" />
   <item type="id" name="btn_privacyRule" />
+  <item type="id" name="btn_extraPrivacyRule" />
   <item type="id" name="btn_forwardLink" />
   <item type="id" name="btn_profilePhoto" />
   <item type="id" name="btn_calls" />
@@ -705,6 +716,7 @@
   <item type="id" name="btn_useInAppBrowser" />
   <item type="id" name="btn_switchRtl" />
   <item type="id" name="btn_debugSwitchRtl" />
+  <item type="id" name="btn_debugLtrEmoji" />
   <item type="id" name="btn_mediaWiFiLimits" />
   <item type="id" name="btn_mediaRoamingLimits" />
   <item type="id" name="btn_stopAllLiveLocations" />
@@ -739,6 +751,7 @@
   <item type="id" name="btn_sendScheduled30Min" />
   <item type="id" name="btn_sendScheduled2Hr" />
   <item type="id" name="btn_sendScheduled8Hr" />
+  <item type="id" name="btn_sendScheduled1Yr" />
   <item type="id" name="btn_sendScheduledCustom" />
   <item type="id" name="btn_expireIn12h" />
   <item type="id" name="btn_expireIn2d" />
@@ -758,6 +771,7 @@
   <item type="id" name="btn_setMsgSender" />
   <item type="id" name="btn_sendNoSound" />
   <item type="id" name="btn_sendAsFile" />
+  <item type="id" name="btn_foregroundSync" />
 
   <item type="id" name="btn_ledDisabled" />
 
@@ -959,6 +973,7 @@
   <item type="id" name="btn_secret_disableNetwork" />
   <item type="id" name="btn_secret_tdlibDatabaseStats" />
   <item type="id" name="btn_secret_databaseStats" />
+  <item type="id" name="btn_secret_attest" />
   <item type="id" name="btn_secret_stressTest" />
   <item type="id" name="btn_secret_tgcalls" />
   <item type="id" name="btn_secret_tgcallsOptions" />
@@ -968,6 +983,7 @@
   <item type="id" name="btn_secret_deleteProfilePhoto" />
   <item type="id" name="btn_secret_forceTcpInCalls" />
   <item type="id" name="btn_secret_forceTdlibRestarts" />
+  <item type="id" name="btn_secret_testPrompts" />
   <item type="id" name="btn_secret_dropHidden" />
   <item type="id" name="btn_secret_disableQrProcess" />
   <item type="id" name="btn_secret_debugQrRegions" />
@@ -980,6 +996,7 @@
   <item type="id" name="btn_secret_pushDuration" />
   <item type="id" name="btn_secret_pushConfig" />
   <item type="id" name="btn_secret_appFingerprint" />
+  <item type="id" name="btn_secret_testForeground" />
   <item type="id" name="btn_string" />
 
   <item type="id" name="btn_test_database" />
@@ -1002,8 +1019,11 @@
   <item type="id" name="btn_log_tags" />
   <item type="id" name="btn_log_android" />
 
-  <!--<item type="id" name="btn_ton" />-->
   <item type="id" name="btn_tdlib" />
+  <item type="id" name="btn_webrtc" />
+  <item type="id" name="btn_ffmpeg" />
+  <item type="id" name="btn_webp" />
+  <item type="id" name="btn_tgcalls" />
   <item type="id" name="btn_pushService" />
   <item type="id" name="btn_tdlib_verbosity" />
   <item type="id" name="btn_tdlib_resetLogSettings" />
@@ -1024,6 +1044,7 @@
   <item type="id" name="reactions_enabled_classic" />
   <item type="id" name="reactions_enabled" />
   <item type="id" name="reactions_premium_locked" />
+  <item type="id" name="reactions_limit" />
 
   <item type="id" name="theme_chat" />
   <item type="id" name="theme_chat_modern" />
@@ -1128,6 +1149,7 @@
   <item type="id" name="btn_messageStickerSet" />
   <item type="id" name="btn_messageEdit" />
   <item type="id" name="btn_messageCall" />
+  <item type="id" name="btn_messageShareCallLogs" />
   <item type="id" name="btn_messageRetractVote" />
   <item type="id" name="btn_messagePollStop" />
   <item type="id" name="btn_messageApplyLocalization" />
@@ -1227,6 +1249,7 @@
 
   <item type="id" name="btn_caption_done" />
   <item type="id" name="btn_caption_emoji" />
+  <item type="id" name="btn_addCaption" />
 
   <item type="id" name="btn_photos" />
   <item type="id" name="btn_voice" />

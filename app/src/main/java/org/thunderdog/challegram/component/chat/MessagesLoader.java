@@ -60,6 +60,7 @@ import me.vkryl.td.Td;
 import me.vkryl.td.TdConstants;
 
 public class MessagesLoader implements Client.ResultHandler {
+  private static final boolean DEBUG_HANDLER = false;
   private static final int CHUNK_SIZE_BIG = 50;
   private static final int CHUNK_SIZE_SMALL = 19;
 
@@ -232,6 +233,9 @@ public class MessagesLoader implements Client.ResultHandler {
 
   private Client.ResultHandler newHandler (final boolean allowMoreTop, final boolean allowMoreBottom, boolean needFindUnread) {
     final long currentContextId = contextId;
+    if (DEBUG_HANDLER) {
+      Log.w("lastHandler = [new instance], error: %b", Log.generateException(1), lastHandler != null);
+    }
     if (lastHandler != null) {
       throw new IllegalStateException("lastHandler != null");
     }
@@ -511,6 +515,9 @@ public class MessagesLoader implements Client.ResultHandler {
         mergeMode = MERGE_MODE_NONE;
         mergeChunk = null;
         synchronized (lock) {
+          if (DEBUG_HANDLER) {
+            Log.w("lastHandler = null [1]", Log.generateException(1));
+          }
           lastHandler = null;
         }
 
@@ -545,6 +552,9 @@ public class MessagesLoader implements Client.ResultHandler {
     }
 
     synchronized (lock) {
+      if (DEBUG_HANDLER) {
+        Log.w("lastHandler = null [2]", Log.generateException(1));
+      }
       lastHandler = null;
       isLoading = false;
     }
@@ -956,7 +966,7 @@ public class MessagesLoader implements Client.ResultHandler {
 
       TdApi.MessageContent content;
       if (photo != null)
-        content = new TdApi.MessagePhoto(photo, text, false, false);
+        content = new TdApi.MessagePhoto(photo, text, false, false, false);
       else if (sticker != null)
         content = new TdApi.MessageSticker(sticker, false);
       else if (audio != null)
@@ -1107,7 +1117,7 @@ public class MessagesLoader implements Client.ResultHandler {
             function = new TdApi.SearchSecretMessages(sourceChatId, searchQuery, lastSearchNextOffset, limit, searchFilter);
           } else {
             Log.ensureReturnType(TdApi.SearchChatMessages.class, TdApi.FoundChatMessages.class);
-            function = new TdApi.SearchChatMessages(sourceChatId, searchQuery, searchSender, (lastFromMessageId = fromMessageId).getMessageId(), lastOffset = offset, lastLimit = limit, searchFilter, messageThread != null ? messageThread.getMessageThreadId() : 0, null);
+            function = new TdApi.SearchChatMessages(sourceChatId, searchQuery, searchSender, (lastFromMessageId = fromMessageId).getMessageId(), lastOffset = offset, lastLimit = limit, searchFilter, messageThread != null ? messageThread.getMessageThreadId() : 0, 0);
           }
           break;
         }
@@ -1120,7 +1130,7 @@ public class MessagesLoader implements Client.ResultHandler {
           if (hasSearchFilter()) {
             loadingLocal = false;
             Log.ensureReturnType(TdApi.SearchChatMessages.class, TdApi.FoundChatMessages.class);
-            function = new TdApi.SearchChatMessages(sourceChatId, null, null, (lastFromMessageId = fromMessageId).getMessageId(), lastOffset = offset, lastLimit = limit, searchFilter, messageThread != null ? messageThread.getMessageThreadId() : 0, null);
+            function = new TdApi.SearchChatMessages(sourceChatId, null, null, (lastFromMessageId = fromMessageId).getMessageId(), lastOffset = offset, lastLimit = limit, searchFilter, messageThread != null ? messageThread.getMessageThreadId() : 0, 0);
           } else if (messageThread != null) {
             loadingLocal = false;
             Log.ensureReturnType(TdApi.GetMessageThreadHistory.class, TdApi.Messages.class);
@@ -1205,7 +1215,7 @@ public class MessagesLoader implements Client.ResultHandler {
       null,
       null,
       tdlib.isSelfSender(event.memberId),
-      false, false,
+      false, false, false,
       false, false, canBeSaved,
       false, false,
       false, false, false, false, false,
@@ -1214,10 +1224,10 @@ public class MessagesLoader implements Client.ResultHandler {
       false,
       event.date, 0,
       null, null, null, null,
-      null, 0,
       null, null, 0, 0,
-      0, null,
-      0,
+      null, 0, 0,
+      0, 0, 0, null,
+      0, 0,
       null,
       null,
       null

@@ -80,6 +80,7 @@ import org.thunderdog.challegram.widget.AvatarView;
 import org.thunderdog.challegram.widget.BetterChatView;
 import org.thunderdog.challegram.widget.ChartLayout;
 import org.thunderdog.challegram.widget.CheckBoxView;
+import org.thunderdog.challegram.widget.CustomEmojiTextView;
 import org.thunderdog.challegram.widget.CustomTextView;
 import org.thunderdog.challegram.widget.DoubleTextView;
 import org.thunderdog.challegram.widget.DoubleTextViewWithIcon;
@@ -264,8 +265,6 @@ public class SettingHolder extends RecyclerView.ViewHolder {
       case ListItem.TYPE_CHAT_HEADER_LARGE: {
         return DetachedChatHeaderView.getViewHeight();
       }
-      case ListItem.TYPE_EDITTEXT_WITH_PHOTO_SMALLER:
-        return Screen.dp(82f);
       case ListItem.TYPE_LIVE_LOCATION_PROMO:
         return Screen.dp(132f);
       case ListItem.TYPE_COLOR_PICKER: {
@@ -602,6 +601,9 @@ public class SettingHolder extends RecyclerView.ViewHolder {
       case ListItem.TYPE_PADDING: {
         PaddingView paddingView = new PaddingView(context);
         paddingView.setLayoutParams(FrameLayoutFix.newParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        if (themeProvider != null) {
+          themeProvider.addThemeInvalidateListener(paddingView);
+        }
         return new SettingHolder(paddingView);
       }
       case ListItem.TYPE_SEPARATOR_FULL:
@@ -993,13 +995,11 @@ public class SettingHolder extends RecyclerView.ViewHolder {
       case ListItem.TYPE_EDITTEXT_COUNTERED:
       case ListItem.TYPE_EDITTEXT_CHANNEL_DESCRIPTION:
       case ListItem.TYPE_EDITTEXT_WITH_PHOTO:
-      case ListItem.TYPE_EDITTEXT_WITH_PHOTO_SMALLER:
       case ListItem.TYPE_EDITTEXT_POLL_OPTION:
       case ListItem.TYPE_EDITTEXT_POLL_OPTION_ADD: {
         FrameLayoutFix frameLayout;
         switch (viewType) {
-          case ListItem.TYPE_EDITTEXT_WITH_PHOTO:
-          case ListItem.TYPE_EDITTEXT_WITH_PHOTO_SMALLER: {
+          case ListItem.TYPE_EDITTEXT_WITH_PHOTO: {
             frameLayout = new ScoutFrameLayout(context);
             frameLayout.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, measureHeightForType(viewType)));
             ViewSupport.setThemedBackground(frameLayout, ColorId.filling, themeProvider);
@@ -1061,7 +1061,7 @@ public class SettingHolder extends RecyclerView.ViewHolder {
         if (viewType != ListItem.TYPE_EDITTEXT_POLL_OPTION_ADD && viewType != ListItem.TYPE_EDITTEXT_POLL_OPTION)
           frameLayout.setPadding(Screen.dp(16f), paddingTop, Screen.dp(16f), Screen.dp(8f));
 
-        MaterialEditTextGroup editText = new MaterialEditTextGroup(context, needHint);
+        MaterialEditTextGroup editText = new MaterialEditTextGroup(context, tdlib, needHint);
         editText.applyRtl(Lang.rtl());
         editText.addThemeListeners(themeProvider);
         editText.setTextListener(adapter);
@@ -1104,8 +1104,7 @@ public class SettingHolder extends RecyclerView.ViewHolder {
         frameLayout.addView(editText);
 
         switch (viewType) {
-          case ListItem.TYPE_EDITTEXT_WITH_PHOTO:
-          case ListItem.TYPE_EDITTEXT_WITH_PHOTO_SMALLER: {
+          case ListItem.TYPE_EDITTEXT_WITH_PHOTO: {
             FrameLayoutFix.LayoutParams params = FrameLayoutFix.newParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             if (Lang.rtl()) {
               params.rightMargin = Screen.dp(82f);
@@ -1288,7 +1287,7 @@ public class SettingHolder extends RecyclerView.ViewHolder {
       case ListItem.TYPE_HEADER_PADDED: {
         final boolean isRtl = Lang.rtl();
 
-        TextView textView = new NoScrollTextView(context);
+        TextView textView = new CustomEmojiTextView(context, tdlib);
         textView.setGravity(Lang.gravity(Gravity.CENTER_VERTICAL));
         int paddingTop = viewType == ListItem.TYPE_HEADER_MULTILINE ? Screen.dp(6f) : viewType == ListItem.TYPE_HEADER_PADDED ? Screen.dp(4f) : 0;
         textView.setPadding(Screen.dp(16f), paddingTop, Screen.dp(16f), viewType == ListItem.TYPE_HEADER_MULTILINE ? Screen.dp(6f) : 0);
@@ -1565,7 +1564,7 @@ public class SettingHolder extends RecyclerView.ViewHolder {
           callsState.setLayoutParams(params);
           callsState.setCompoundDrawablesWithIntrinsicBounds(callIcon, null, null, null);
           callsState.setCompoundDrawablePadding(Screen.dp(8));
-          callsState.setText("Calls");
+          callsState.setText(Lang.getString(R.string.SessionAcceptsCalls));
           callsState.setTextColor(Theme.getColor(ColorId.textNeutral));
           callsState.setAllCaps(true);
           callsState.setGravity(Gravity.CENTER_VERTICAL);
@@ -2249,7 +2248,7 @@ public class SettingHolder extends RecyclerView.ViewHolder {
 
           int inputIndex = 0;
           for (int id : ids) {
-            editText = new MaterialEditTextGroup(context);
+            editText = new MaterialEditTextGroup(context, tdlib);
             if (id != R.id.color_default) {
               editText.getEditText().setSelectAllOnFocus(true);
             }
